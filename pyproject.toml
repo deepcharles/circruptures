@@ -1,0 +1,7 @@
+[build-system]
+# Minimum requirements for the build system to execute.
+requires = [
+    "setuptools>=42",  # https://github.com/deepcharles/ruptures/pull/100#discussion_r553700339
+    "wheel",
+]
+build-backend = "setuptools.build_meta"
