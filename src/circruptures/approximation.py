@@ -1,6 +1,8 @@
 import numpy as np
 from scipy.stats import circmean
-def get_approx(signal: np.ndarray, bkps: np.ndarray)->np.ndarray:
+
+
+def get_approx(signal: np.ndarray, bkps: np.ndarray) -> np.ndarray:
     # signal, shape (n_samples, n_dims)
     approx = np.empty_like(signal)
     n_bkps = len(bkps)

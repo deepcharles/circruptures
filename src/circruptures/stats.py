@@ -13,6 +13,16 @@ def circular_mean_1d(angles_in_rad: np.ndarray) -> float:
 
 
 @njit
+def circular_mean_axis0(angles_in_rad: np.ndarray) -> float:
+    # angles_in_rad, shape (n_samples, n_dims)
+    n_dims = angles_in_rad.shape[1]
+    out = np.empty_like(angles_in_rad[0])
+    for k_dim in range(n_dims):
+        out[k_dim] = circular_mean_1d(angles_in_rad[:, k_dim])
+    return out
+
+
+@njit
 def circular_var_1d(angles_in_rad: np.ndarray) -> float:
     # angles_in_rad, shape (n_samples,)
     # https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.circvar.html
