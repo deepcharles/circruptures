@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import Tuple, Union
 
 import numpy as np
 from numba import njit
@@ -11,11 +11,13 @@ def init_centroids(signal: np.ndarray, n_states: int) -> np.ndarray:
     """Initialize centroids.
 
     Args:
-        signal (np.ndarray): A 2D array of shape (n_samples, n_dims) representing the input data.
+        signal (np.ndarray): A 2D array of shape (n_samples, n_dims) representing the
+        input data.
         n_states (int): The number of centroids (clusters) to initialize.
 
     Returns:
-        np.ndarray: A 2D array of shape (n_centroids, n_dims) representing the initialized centroids.
+        np.ndarray: A 2D array of shape (n_centroids, n_dims) representing the
+        initialized centroids.
     """
     n_dims = signal.shape[1]
     centroids = np.empty(shape=(n_states, n_dims), dtype=np.float64)
@@ -31,7 +33,8 @@ def init_centroids(signal: np.ndarray, n_states: int) -> np.ndarray:
 def get_best_previous_state_and_soc(
     soc_vec: np.ndarray, end_state: int, penalty: float
 ) -> Tuple[int, float]:
-    """Update the sum of costs (soc) and the best previous state given the end state and a penalty.
+    """Update the sum of costs (soc) and the best previous state given the end state and
+    a penalty.
 
     Parameters:
     - soc_vec (np.ndarray): Vector of sums of costs (soc), shape (n_states,).
@@ -39,7 +42,8 @@ def get_best_previous_state_and_soc(
     - penalty (float): Penalty value for the update.
 
     Returns:
-    - Tuple[int, float]: Tuple containing the best previous state and the updated sum of costs.
+    - Tuple[int, float]: Tuple containing the best previous state and the updated sum of
+    costs.
     """
     n_states = soc_vec.shape[0]
     best_previous_state = end_state
@@ -92,14 +96,60 @@ def get_state_sequence(costs: np.ndarray, penalty: float) -> np.ndarray:
 
 @njit
 def dist_func(x: np.ndarray, y: np.ndarray) -> float:
-    # x, shape (2,)
-    # y, shape (2,)
+    """Computes the circular (angular) distance between two points on a circle.
+
+    Given two points `x` and `y` (each as 1D NumPy arrays of shape (n_dims,)), this
+    function calculates the sum of the minimal angular distances between corresponding
+    elements, considering the periodicity of the circle (with period 2π).
+    Parameters
+    ----------
+    x : np.ndarray
+        A 1D NumPy array of shape (n_dims,) representing the first point in angular
+        coordinates (radians).
+    y : np.ndarray
+        A 1D NumPy array of shape (n_dims,) representing the second point in angular
+        coordinates (radians).
+    Returns
+    -------
+    float
+        The sum of the minimal angular distances between the corresponding elements of
+        `x` and `y`.
+    """
+
+    # x, shape (n_dims,)
+    # y, shape (n_dims,)
     diff = np.abs(x - y)
     return np.sum(np.fmin(diff, 2 * np.pi - diff))
 
 
 @njit
 def compute_all_costs(signal, means):
+    """
+    Compute the squared distance costs between each sample in the signal and each state
+    mean.
+
+    Parameters
+    ----------
+    signal : np.ndarray, shape (n_samples, n_dims)
+        The input data, where each row corresponds to a sample and each column to a
+        feature dimension.
+    means : np.ndarray, shape (n_states, n_dims)
+        The mean vectors for each state, where each row corresponds to a state mean.
+
+    Returns
+    -------
+    costs : np.ndarray, shape (n_samples, n_states)
+        The matrix of squared distances, where costs[i, j] is the squared distance
+        between signal[i] and means[j] as computed by `dist_func`.
+
+    Notes
+    -----
+    Requires a distance function `dist_func` to be defined in the scope, which computes
+    the distance between two vectors.
+    """
+    # signal, shape (n_samples, n_dims)
+    # means, shape (n_states, n_dims)
+    # costs, shape (n_samples, n_states)
     n_samples = signal.shape[0]
     n_states = means.shape[0]
     costs = np.empty((n_samples, n_states), dtype=np.float64)
@@ -109,11 +159,28 @@ def compute_all_costs(signal, means):
     return costs
 
 
-def get_bkps(signal, penalty=1, n_states=10, return_approx=False):
-    centroids = init_centroids(signal, n_states)
-    costs = compute_all_costs(signal, centroids)
-    states = get_state_sequence(costs, penalty)
-    bkps = np.nonzero(np.diff(states))[0]
+def get_bkps(
+    signal: np.ndarray,
+    penalty: float = 1,
+    n_states: int = 10,
+    return_approx: bool = False,
+) -> Union[np.ndarray, Tuple[np.ndarray, np.ndarray]]:
+    """Compute change points in a circular signal
+
+    Args:
+        signal (np.ndarray): Input data of shape (n_samples, n_dims).
+        penalty (float, optional): Penalty value for state transitions. Default is 1.
+        n_states (int, optional): Number of states (clusters) to use. Default is 10.
+        return_approx (bool, optional): If True, also return the approximated signal. Default is False.
+
+    Returns:
+        np.ndarray: Indices of breakpoints.
+        If return_approx is True, also returns the approximated signal (np.ndarray).
+    """
+    centroids = init_centroids(signal, n_states)  # shape (n_states, n_dims)
+    costs = compute_all_costs(signal, centroids)  # shape (n_samples, n_states)
+    states = get_state_sequence(costs, penalty)  # shape (n_samples,)
+    bkps = np.nonzero(np.diff(states))[0]  # indices of change points
     n_samples = signal.shape[0]
     bkps = np.append(bkps, n_samples)
     if return_approx:
