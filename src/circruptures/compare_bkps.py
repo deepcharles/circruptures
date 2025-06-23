@@ -3,6 +3,7 @@ from itertools import tee
 import numpy as np
 from numba import njit
 from scipy.stats import circvar, wasserstein_distance
+
 from .stats import circular_mean_axis0
 
 # def triwise(iterable):
@@ -93,7 +94,7 @@ def distance_between_bkps(
     bkps1: np.ndarray,
     signal2: np.ndarray,
     bkps2: np.ndarray,
-    width: int
+    width: int,
 ) -> float:
     assert bkps1[-1] == bkps2[-1], "Both signals should have the same length."
     distrib1 = convert_bkps_to_distrib(signal=signal1, bkps=bkps1, width=width)
