@@ -76,12 +76,22 @@ def get_state_sequence(costs: np.ndarray, penalty: float) -> np.ndarray:
 
     # Forward loop
     for end in range(1, n_samples + 1):
+        best_state_if_change = np.argmin(soc_array[end - 1])
+        current_min_soc_with_pen = soc_array[end - 1, best_state_if_change] + penalty
         for k_state in range(n_states):
-            best_state, best_soc = get_best_previous_state_and_soc(
-                soc_vec=soc_array[end - 1], end_state=k_state, penalty=penalty
-            )
-            soc_array[end, k_state] = best_soc + costs[end - 1, k_state]
-            state_array[end, k_state] = best_state
+            cost_value = costs[end - 1, k_state]
+            if soc_array[end - 1, k_state] < current_min_soc_with_pen:  # no change
+                soc_array[end, k_state] = soc_array[end - 1, k_state] + cost_value
+                state_array[end, k_state] = k_state
+            else:  # with change
+                soc_array[end, k_state] = current_min_soc_with_pen + cost_value
+                state_array[end, k_state] = best_state_if_change
+
+            # best_state, best_soc = get_best_previous_state_and_soc(
+            #     soc_vec=soc_array[end - 1], end_state=k_state, penalty=penalty
+            # )
+            # soc_array[end, k_state] = best_soc + costs[end - 1, k_state]
+            # state_array[end, k_state] = best_state
 
     # Backtracking
     end = n_samples
